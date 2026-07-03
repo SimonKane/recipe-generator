@@ -30,6 +30,22 @@ export interface SemanticSearchRequest {
     min_score?: number;
 }
 
+interface GeneratedRecipe {
+    title?: string;
+    name?: string;
+    description?: string;
+    ingredients?: string[];
+    instructions?: string[] | string;
+    prep_time?: string | number;
+    prepTime?: string | number;
+    cook_time?: string | number;
+    cookTime?: string | number;
+    servings?: number;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    cuisine?: string;
+    tags?: string[];
+}
+
 class RecipeAPI {
     private async request(endpoint: string, options: RequestInit = {}) {
         const url = `${API_BASE_URL}/api/v1${endpoint}`;
@@ -111,7 +127,7 @@ class RecipeAPI {
     }
 
     // Save a recipe (helper method for generated recipes)
-    async saveGeneratedRecipe(generatedRecipe: any): Promise<Recipe> {
+    async saveGeneratedRecipe(generatedRecipe: GeneratedRecipe): Promise<Recipe> {
         console.log('Converting generated recipe:', generatedRecipe);
 
         // Convert from generated recipe format to backend format

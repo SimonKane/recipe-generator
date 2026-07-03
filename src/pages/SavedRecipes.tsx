@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { RecipeCard, BackendRecipe } from "@/components/RecipeCard";
 import { useToast } from "@/hooks/use-toast";
 import { recipeAPI, Recipe, RecipeSearchResult } from "@/lib/recipeAPI";
@@ -27,12 +27,7 @@ const SavedRecipes = () => {
     });
     const { toast } = useToast();
 
-    // Load recipes on component mount and when filters change
-    useEffect(() => {
-        loadRecipes();
-    }, [pagination.page, selectedCuisine, selectedDifficulty, searchQuery]);
-
-    const loadRecipes = async () => {
+    const loadRecipes = useCallback(async () => {
         setLoading(true);
         try {
             const result: RecipeSearchResult = await recipeAPI.getRecipes({
@@ -76,7 +71,19 @@ const SavedRecipes = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [
+        pagination.page,
+        pagination.size,
+        searchQuery,
+        selectedCuisine,
+        selectedDifficulty,
+        toast,
+    ]);
+
+    // Load recipes on component mount and when filters change
+    useEffect(() => {
+        loadRecipes();
+    }, [loadRecipes]);
 
     const handleSemanticSearch = async () => {
         if (!semanticSearchQuery.trim()) {

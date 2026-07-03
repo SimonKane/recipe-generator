@@ -3,8 +3,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+DEFAULT_DATABASE_URL = (
+    "sqlite:////tmp/food_recipes.db"
+    if os.getenv("VERCEL")
+    else "sqlite:///./food_recipes.db"
+)
+
 class Settings:
-    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./food_recipes.db")
+    database_url: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     openai_model: str = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
     free_ai_enabled: bool = os.getenv("FREE_AI_ENABLED", "true").lower() == "true"
