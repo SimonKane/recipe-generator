@@ -6,18 +6,116 @@ import { recipeAPI } from "@/lib/recipeAPI";
 import { Loader2, UtensilsCrossed } from "lucide-react";
 import heroImage from "@/assets/hero-ingredients.jpg";
 
+const buildImageUrl = (recipeName: string, ingredients: string[], seed = 1) => {
+  const prompt = [
+    "photorealistic plated food photography",
+    "natural light",
+    recipeName,
+    `ingredients: ${ingredients.join(", ")}`,
+  ].join(", ");
+
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?model=flux&width=1024&height=768&nologo=true&safe=true&seed=${seed}`;
+};
+
+const fallbackRecipes = (ingredients: string[]): Recipe[] => {
+  const main = ingredients[0]?.trim() || "Ingredient";
+  const firstName = `${main[0].toUpperCase()}${main.slice(1)} Weeknight Bowl`;
+  const secondName = `Roasted ${main[0].toUpperCase()}${main.slice(1)} Tray`;
+
+  return [
+    {
+      name: firstName,
+      prepTime: "10 min",
+      cookTime: "18 min",
+      difficulty: "easy",
+      servings: 2,
+      ingredients: [...ingredients, "olive oil", "salt", "black pepper"],
+      instructions: [
+        `Prepare ${ingredients.join(", ")} by chopping everything into bite-sized pieces.`,
+        "Heat a pan with olive oil and cook the firm ingredients first.",
+        "Add the remaining ingredients and season with salt and pepper.",
+        "Serve warm in bowls with any sauce, herbs, or leftovers you like.",
+      ],
+      imageUrl: buildImageUrl(firstName, ingredients, 101),
+    },
+    {
+      name: secondName,
+      prepTime: "12 min",
+      cookTime: "25 min",
+      difficulty: "medium",
+      servings: 3,
+      ingredients: [...ingredients, "garlic", "lemon juice", "dried herbs"],
+      instructions: [
+        "Preheat the oven to 220 C.",
+        "Toss the ingredients with garlic, lemon juice, herbs, salt, and oil.",
+        "Roast on a tray until browned and cooked through.",
+        "Taste, adjust seasoning, and serve with bread, rice, or salad.",
+      ],
+      imageUrl: buildImageUrl(secondName, ingredients, 202),
+    },
+  ];
+};
+
+const generateInFrontend = async (ingredients: string[]): Promise<Recipe[]> => {
+  const prompt = [
+    `Create 2 practical recipes from these ingredients: ${ingredients.join(", ")}.`,
+    "Return only valid JSON, no markdown.",
+    'Use this shape: {"recipes":[{"name":"...","prepTime":"10 min","cookTime":"20 min","difficulty":"easy","servings":2,"ingredients":["..."],"instructions":["step 1","step 2"]}]}',
+  ].join(" ");
+
+  const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
+  if (!response.ok) {
+    throw new Error("Free AI service failed");
+  }
+
+  const raw = await response.text();
+  const cleaned = raw.replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "").trim();
+  const data = JSON.parse(cleaned);
+
+  const generatedRecipes = (data.recipes || []).map((recipe: Partial<Recipe>, index: number) => {
+    const name = recipe.name || "AI Recipe";
+    const recipeIngredients = recipe.ingredients?.length ? recipe.ingredients : ingredients;
+
+    return {
+      name,
+      prepTime: recipe.prepTime || "10 min",
+      cookTime: recipe.cookTime || "20 min",
+      difficulty: recipe.difficulty || "medium",
+      servings: recipe.servings || 2,
+      ingredients: recipeIngredients,
+      instructions: recipe.instructions?.length ? recipe.instructions : ["Cook everything until delicious."],
+      imageUrl: buildImageUrl(name, recipeIngredients, index + 1),
+    };
+  });
+
+  return [...generatedRecipes, ...fallbackRecipes(ingredients)].slice(0, 2);
+};
+
 const Index = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [canSaveRecipes, setCanSaveRecipes] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(
+    () => localStorage.getItem("recipeai-generation-used") === "true"
+  );
   const { toast } = useToast();
 
   const generateRecipes = async (ingredients: string[]) => {
+    if (hasGenerated) {
+      toast({
+        title: "Demo limit reached",
+        description: "This showcase allows one AI generation per browser.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     setRecipes([]);
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-recipes`,
+        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:8000"}/api/v1/recipes/generate`,
         {
           method: "POST",
           headers: {
@@ -33,18 +131,27 @@ const Index = () => {
       }
 
       const data = await response.json();
-      setRecipes(data.recipes);
+      const backendRecipes = [...(data.recipes || []), ...fallbackRecipes(ingredients)].slice(0, 2);
+      setRecipes(backendRecipes);
+      setCanSaveRecipes(true);
+      localStorage.setItem("recipeai-generation-used", "true");
+      setHasGenerated(true);
 
       toast({
         title: "Recipes Generated!",
-        description: `Found ${data.recipes.length} delicious recipe${data.recipes.length > 1 ? 's' : ''} for you.`,
+        description: `Found ${backendRecipes.length} delicious recipes for you via ${data.source || "AI"}.`,
       });
     } catch (error) {
       console.error("Error generating recipes:", error);
+      const frontendRecipes = await generateInFrontend(ingredients).catch(() => fallbackRecipes(ingredients));
+      setRecipes(frontendRecipes);
+      setCanSaveRecipes(false);
+      localStorage.setItem("recipeai-generation-used", "true");
+      setHasGenerated(true);
+
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate recipes. Please try again.",
-        variant: "destructive",
+        title: "Generated in frontend-only mode",
+        description: "Backend was unavailable, so the showcase used the free browser fallback.",
       });
     } finally {
       setIsLoading(false);
@@ -97,7 +204,11 @@ const Index = () => {
             </p>
           </div>
 
-          <IngredientInput onGenerate={generateRecipes} isLoading={isLoading} />
+          <IngredientInput
+            onGenerate={generateRecipes}
+            isLoading={isLoading}
+            limitReached={hasGenerated}
+          />
         </div>
       </div>
 
@@ -125,7 +236,7 @@ const Index = () => {
                 key={index}
                 recipe={recipe}
                 onSave={handleSaveRecipe}
-                showSaveButton={true}
+                showSaveButton={canSaveRecipes}
                 showDeleteButton={false}
               />
             ))}

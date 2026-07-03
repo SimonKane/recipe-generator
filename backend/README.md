@@ -1,5 +1,14 @@
 # Food Recipe Generator Backend
 
+## Current showcase mode
+
+This backend is now configured to run locally with FastAPI + SQLite. The
+frontend calls this backend for AI recipe generation instead of calling the old
+Supabase Edge Function directly.
+
+For the simplest setup, use the root [`SHOWCASE_SETUP.md`](../SHOWCASE_SETUP.md).
+The older PostgreSQL/Docker notes below are legacy project documentation.
+
 A FastAPI backend service for the Food Recipe Generator application with semantic search capabilities.
 
 ## Features

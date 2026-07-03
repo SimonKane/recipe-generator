@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.database import init_db
 from app.config import settings
 from app.routers import recipes_simple
 
@@ -20,6 +21,10 @@ app.add_middleware(
 
 # Include routers
 app.include_router(recipes_simple.router, prefix="/api/v1/recipes", tags=["recipes"])
+
+@app.on_event("startup")
+async def startup():
+    init_db()
 
 @app.get("/")
 async def root():

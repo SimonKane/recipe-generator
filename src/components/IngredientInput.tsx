@@ -6,9 +6,10 @@ import { X, Plus } from "lucide-react";
 interface IngredientInputProps {
   onGenerate: (ingredients: string[]) => void;
   isLoading: boolean;
+  limitReached?: boolean;
 }
 
-export const IngredientInput = ({ onGenerate, isLoading }: IngredientInputProps) => {
+export const IngredientInput = ({ onGenerate, isLoading, limitReached = false }: IngredientInputProps) => {
   const [ingredients, setIngredients] = useState<string[]>([""]);
 
   const addIngredient = () => {
@@ -58,14 +59,14 @@ export const IngredientInput = ({ onGenerate, isLoading }: IngredientInputProps)
               onChange={(e) => updateIngredient(index, e.target.value)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               className="flex-1"
-              disabled={isLoading}
+              disabled={isLoading || limitReached}
             />
             {ingredients.length > 1 && (
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => removeIngredient(index)}
-                disabled={isLoading}
+                disabled={isLoading || limitReached}
                 className="shrink-0"
               >
                 <X className="h-4 w-4" />
@@ -79,7 +80,7 @@ export const IngredientInput = ({ onGenerate, isLoading }: IngredientInputProps)
         <Button
           variant="outline"
           onClick={addIngredient}
-          disabled={isLoading}
+          disabled={isLoading || limitReached}
           className="flex-1"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -87,10 +88,10 @@ export const IngredientInput = ({ onGenerate, isLoading }: IngredientInputProps)
         </Button>
         <Button
           onClick={handleGenerate}
-          disabled={isLoading || ingredients.every(ing => ing.trim() === "")}
+          disabled={isLoading || limitReached || ingredients.every(ing => ing.trim() === "")}
           className="flex-1"
         >
-          {isLoading ? "Generating..." : "Generate Recipes"}
+          {isLoading ? "Generating..." : limitReached ? "Demo Limit Reached" : "Generate Recipes"}
         </Button>
       </div>
     </div>

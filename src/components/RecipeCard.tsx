@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,49 @@ interface RecipeCardProps {
   showSaveButton?: boolean;
   showDeleteButton?: boolean;
 }
+
+const retryImageUrl = (imageUrl: string, retry: number) => {
+  try {
+    const url = new URL(imageUrl);
+    url.searchParams.set("seed", String(700 + retry));
+    url.searchParams.set("model", "flux");
+    url.searchParams.set("safe", "true");
+    return url.toString();
+  } catch {
+    return imageUrl;
+  }
+};
+
+const RecipeImage = ({ imageUrl, recipeName }: { imageUrl: string; recipeName: string }) => {
+  const [retry, setRetry] = useState(0);
+  const [src, setSrc] = useState(imageUrl);
+
+  useEffect(() => {
+    setRetry(0);
+    setSrc(imageUrl);
+  }, [imageUrl]);
+
+  const handleError = () => {
+    if (retry < 3) {
+      const nextRetry = retry + 1;
+      setRetry(nextRetry);
+      setSrc(retryImageUrl(imageUrl, nextRetry));
+    }
+  };
+
+  return (
+    <div className="relative h-64 w-full overflow-hidden bg-muted">
+      <img
+        src={src}
+        alt={recipeName}
+        className="w-full h-full object-cover"
+        referrerPolicy="no-referrer"
+        onError={handleError}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+    </div>
+  );
+};
 
 export const RecipeCard = ({
   recipe,
@@ -97,14 +141,7 @@ export const RecipeCard = ({
   return (
     <Card className="overflow-hidden hover:shadow-[var(--shadow-hover)] transition-all duration-300">
       {recipeImageUrl && (
-        <div className="relative h-64 w-full overflow-hidden">
-          <img
-            src={recipeImageUrl}
-            alt={recipeName}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-        </div>
+        <RecipeImage imageUrl={recipeImageUrl} recipeName={recipeName} />
       )}
       <CardHeader className="bg-gradient-to-br from-card to-muted/30">
         <div className="flex items-start justify-between gap-4">
