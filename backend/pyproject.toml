@@ -1,3 +1,16 @@
+[project]
+name = "food-recipe-backend"
+version = "0.1.0"
+description = "FastAPI backend for Food Recipe Generator with semantic search"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "fastapi>=0.104.1,<1.0.0",
+    "uvicorn[standard]>=0.24.0,<1.0.0",
+    "pydantic>=2.5.0,<3.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+]
+
 [tool.poetry]
 name = "food-recipe-backend"
 version = "0.1.0"
